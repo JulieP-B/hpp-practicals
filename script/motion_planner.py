@@ -4,7 +4,6 @@ class MotionPlanner:
     self.ps = ps
 
   def solveBiRRT (self, maxIter = float("inf")):
-    print ("Method solveBiRRT is not implemented yet")
     self.ps.prepareSolveStepByStep ()
     finished = False
 
@@ -15,13 +14,36 @@ class MotionPlanner:
 
     iter = 0
     while True:
+
       #### RRT begin
       newConfigs = list ()
+      q_rand = self.robot.shootRandomConfig()
+      for i in range(self.ps.numberConnectedComponents()):
+        q_near, _ = self.ps.getNearestConfig(q_rand,connectedComponentId=i)
+        valid, path, _ = self.ps.directPath(q_near,q_rand,True)
+        if not valid:
+          l = self.ps.pathLength (path)
+          q_new = self.ps.configAtParam (path, l)
+        else:
+          q_new = q_rand
+        if q_new != q_near :
+          self.ps.addConfigToRoadmap(q_new)
+          self.ps.addEdgeToRoadmap(q_near,q_new,path,True)
+          newConfigs.append(q_new)
+        else:
+          newConfigs.append(None)
 
+        
       ## Try connecting the new nodes together
-      for i in range (len(newConfigs)):
-        pass
+      for i,q in enumerate(newConfigs):
+        if not q is None:
+          q_near, _ = self.ps.getNearestConfig(q, connectedComponentId=1-i)
+          valid, path, _ = self.ps.directPath (q, q_near, True)
+          if valid:
+            self.ps.addEdgeToRoadmap (q, q_near, path, True)
+        
       #### RRT end
+
       ## Check if the problem is solved.
       nbCC = self.ps.numberConnectedComponents ()
       if nbCC == 1:
